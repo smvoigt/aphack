@@ -1,0 +1,65 @@
+core3.fmt1.he.net> ping 220.247.159.10 numeric count 5 
+  Sending 5, 16-byte ICMP Echo to 220.247.159.10, timeout 5000 msec, TTL 64
+Reply from 220.247.159.10  : bytes=16 time=178ms TTL=61
+Reply from 220.247.159.10  : bytes=16 time=195ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=263ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=202ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=163ms TTL=60
+Success rate is 100 percent (5/5), round-trip min/avg/max=163/200/263 ms.
+# Entry cached for another 60 seconds.
+
+core1.ams1.he.net> ping 220.247.159.10 numeric count 5 
+  Sending 5, 16-byte ICMP Echo to 220.247.159.10, timeout 5000 msec, TTL 64
+Reply from 220.247.159.10  : bytes=16 time=302ms TTL=58
+Reply from 220.247.159.10  : bytes=16 time=297ms TTL=58
+Reply from 220.247.159.10  : bytes=16 time=304ms TTL=58
+Reply from 220.247.159.10  : bytes=16 time=337ms TTL=58
+Reply from 220.247.159.10  : bytes=16 time=301ms TTL=58
+Success rate is 100 percent (5/5), round-trip min/avg/max=297/308/337 ms.
+# Entry cached for another 60 seconds.
+
+core1.jnb1.he.net> ping 220.247.159.10 numeric count 5 
+  Sending 5, 16-byte ICMP Echo to 220.247.159.10, timeout 5000 msec, TTL 64
+Reply from 220.247.159.10  : bytes=16 time=446ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=461ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=453ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=445ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=444ms TTL=57
+Success rate is 100 percent (5/5), round-trip min/avg/max=444/449/461 ms.
+# Entry cached for another 60 seconds.
+
+core1.dxb1.he.net> ping 220.247.159.10 numeric count 5 
+  Sending 5, 16-byte ICMP Echo to 220.247.159.10, timeout 5000 msec, TTL 64
+Reply from 220.247.159.10  : bytes=16 time=404ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=405ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=404ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=404ms TTL=57
+Reply from 220.247.159.10  : bytes=16 time=404ms TTL=57
+Success rate is 100 percent (5/5), round-trip min/avg/max=404/404/405 ms.
+# Entry cached for another 60 seconds.
+
+core1.sin1.he.net> ping 220.247.159.10 numeric count 5 
+  Sending 5, 16-byte ICMP Echo to 220.247.159.10, timeout 5000 msec, TTL 64
+Reply from 220.247.159.10  : bytes=16 time=181ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=151ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=147ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=166ms TTL=60
+Reply from 220.247.159.10  : bytes=16 time=146ms TTL=60
+Success rate is 100 percent (5/5), round-trip min/avg/max=146/158/181 ms.
+# Entry cached for another 60 seconds.
+
+Sending 5, 100-byte ICMP Echos to 220.247.159.10, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 156/158/160 ms
+
+Sending 5, 100-byte ICMP Echos to 220.247.159.10, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 188/189/192 ms
+
+Target: 220.247.159.10 with 64 data bytes
+Success rate sent/received = (1/1) packets
+Round-Trip min/avg/max = 443ms/443ms/443ms
+
+Target: 220.247.159.10 with 64 data bytes
+Success rate sent/received = (1/0) packets
+
