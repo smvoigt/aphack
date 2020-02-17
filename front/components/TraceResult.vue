@@ -22,31 +22,51 @@
           </v-toolbar>
         </template>
         <template v-slot:expanded-item="">
-          <td :colspan="5">
-            <v-simple-table>
-              <template v-slot:default>
-                <thead>
-                  <tr>
-                    <th class="text-left">Hop</th>
-                    <th class="text-left">From</th>
-                    <th class="text-left">Min</th>
-                    <th class="text-left">Max</th>
-                    <th class="text-left">Avg</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template v-for="item in expanded[0].result">
-                    <tr v-if="item.from" :key="item.id">
-                      <td>{{ item.hop }}</td>
-                      <td>{{ item.from }}</td>
-                      <td>{{ item.rtt.min }}</td>
-                      <td>{{ item.rtt.max }}</td>
-                      <td>{{ item.rtt.avg }}</td>
-                    </tr>
+          <td :colspan="7">
+            <v-tabs v-model="currentTab" centered>
+              <v-tab href="#tab-table">
+                Table
+              </v-tab>
+              <v-tab href="#tab-chart">
+                Chart
+              </v-tab>
+            </v-tabs>
+            <v-tabs-items v-model="currentTab">
+              <v-tab-item value="tab-table">
+                <v-simple-table>
+                  <template v-slot:default>
+                    <thead>
+                      <tr>
+                        <th class="text-left">Hop</th>
+                        <th class="text-left">From</th>
+                        <th class="text-left">Min</th>
+                        <th class="text-left">Max</th>
+                        <th class="text-left">Avg</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template v-for="item in expanded[0].result">
+                        <tr v-if="item.from" :key="item.id">
+                          <td>{{ item.hop }}</td>
+                          <td>{{ item.from }}</td>
+                          <td>{{ item.rtt.min }}</td>
+                          <td>{{ item.rtt.max }}</td>
+                          <td>{{ item.rtt.avg }}</td>
+                        </tr>
+                      </template>
+                    </tbody>
                   </template>
-                </tbody>
-              </template>
-            </v-simple-table>
+                </v-simple-table>
+              </v-tab-item>
+              <v-tab-item value="tab-chart">
+                <GChart
+                  v-if="expanded[0]"
+                  :settings="{ packages: ['corechart', 'timeline'] }"
+                  type="Timeline"
+                  :data="parseChartData(expanded[0].result)"
+                />
+              </v-tab-item>
+            </v-tabs-items>
           </td>
         </template>
       </v-data-table>
@@ -58,13 +78,18 @@
 </template>
 
 <script>
+import { GChart } from 'vue-google-charts';
 import traceroute from './test.json';
 
 export default {
+  components: {
+    GChart
+  },
   // eslint-disable-next-line vue/require-prop-types
   props: ['address'],
   data() {
     return {
+      currentTab: 'tab-table',
       loading: false,
       data: null,
       expanded: [],
@@ -84,78 +109,110 @@ export default {
       ]
     };
   },
+
   watch: {
-    address(value, prev) {
-      if (value !== prev) {
-        this.loading = true;
-        setTimeout(() => {
-          this.data = traceroute.map((i, idx) => {
-            let localMin = 9999999;
-            let localMax = 0;
-            let localTotal = 0;
-            let localCount = 0;
-            const result = i.result.map((hop, index) => {
-              let min = 9999999;
-              let max = 0;
-              let rttCount = 0;
-              let rttTotal = 0;
-              let from = '';
-              hop.result.forEach((r) => {
-                if (r.rtt) {
-                  from = r.from;
-                  if (r.rtt > max) {
-                    max = r.rtt;
+    address: {
+      immediate: true,
+      handler(value, prev) {
+        if (value !== prev) {
+          this.loading = true;
+          setTimeout(() => {
+            this.data = traceroute.map((i, idx) => {
+              let localMin = 9999999;
+              let localMax = 0;
+              let localTotal = 0;
+              let localCount = 0;
+              const result = i.result.map((hop, index) => {
+                let min = 9999999;
+                let max = 0;
+                let rttCount = 0;
+                let rttTotal = 0;
+                let from = '';
+                hop.result.forEach((r) => {
+                  if (r.rtt) {
+                    from = r.from;
+                    if (r.rtt > max) {
+                      max = r.rtt;
+                    }
+                    if (r.rtt < min) {
+                      min = r.rtt;
+                    }
+                    rttTotal += r.rtt;
+                    rttCount++;
                   }
-                  if (r.rtt < min) {
-                    min = r.rtt;
+                });
+                let avg;
+                if (rttTotal && rttCount) {
+                  avg = rttTotal / rttCount;
+                  // calculate local min and max
+                  if (max > localMax) {
+                    localMax = max;
                   }
-                  rttTotal += r.rtt;
-                  rttCount++;
+                  if (min < localMin) {
+                    localMin = min;
+                  }
+                  localTotal += avg;
+                  localCount++;
                 }
+
+                return {
+                  hop: hop.hop,
+                  from,
+                  rtt: {
+                    min: +min.toFixed(2),
+                    max: +max.toFixed(2),
+                    avg: avg ? +avg.toFixed(2) : 'NaN'
+                  },
+                  id: index
+                };
               });
-              let avg;
-              if (rttTotal && rttCount) {
-                avg = rttTotal / rttCount;
-                // calculate local min and max
-                if (max > localMax) {
-                  localMax = max;
-                }
-                if (min < localMin) {
-                  localMin = min;
-                }
-                localTotal += avg;
-                localCount++;
-              }
+              const localAvg = localTotal / localCount;
 
               return {
-                hop: hop.hop,
-                from,
+                id: idx,
+                destination_address: i.dst_addr,
+                destination_name: i.dst_name,
+                from: i.from,
                 rtt: {
-                  min: +min.toFixed(2),
-                  max: +max.toFixed(2),
-                  avg: avg ? +avg.toFixed(2) : 'NaN'
+                  min: +localMin.toFixed(2),
+                  max: +localMax.toFixed(2),
+                  avg: +localAvg.toFixed(2)
                 },
-                id: index
+                result
               };
             });
-            const localAvg = localTotal / localCount;
-
-            return {
-              id: idx,
-              destination_address: i.dst_addr,
-              destination_name: i.dst_name,
-              from: i.from,
-              rtt: {
-                min: +localMin.toFixed(2),
-                max: +localMax.toFixed(2),
-                avg: +localAvg.toFixed(2)
-              },
-              result
-            };
-          });
-          this.loading = false;
-        }, 1000);
+            this.loading = false;
+          }, 1000);
+        }
       }
+    }
+  },
+  methods: {
+    parseChartData(rawData) {
+      // console.log(rawData);
+      const data = [['hop', 'min', 'max']];
+      // for (let index = 0; index < rawData.length; index++) {
+      //   const i = rawData[index];
+      //   const { rtt } = i;
+      //   if (rtt.min < rtt.max) {
+      //     data.push([i.hop, rtt.min, rtt.max]);
+      //   }
+      // }
+      rawData.forEach((i) => {
+        const { rtt } = i;
+        if (rtt.min < rtt.max) {
+          data.push(['' + i.hop, rtt.min, rtt.max]);
+        }
+      });
+      console.log(data);
+      // return data;
+      const data2 = [
+        ['name', 'min', 'max'],
+        ['aaa', 1, 4],
+        ['bbb', 2, 6]
+      ];
+      console.log(data2);
+      return data;
     }
   }
 };

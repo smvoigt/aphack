@@ -1,4 +1,4 @@
-const colors = require('vuetify/es5/util/colors').default
+const colors = require('vuetify/es5/util/colors').default;
 
 module.exports = {
   mode: 'spa',
@@ -35,8 +35,8 @@ module.exports = {
    ** Nuxt.js dev-modules
    */
   buildModules: [
-    // Doc: https://github.com/nuxt-community/eslint-module
-    '@nuxtjs/eslint-module',
+    // // Doc: https://github.com/nuxt-community/eslint-module
+    // '@nuxtjs/eslint-module',
     '@nuxtjs/vuetify'
   ],
   /*
@@ -83,4 +83,4 @@ module.exports = {
      */
     extend(config, ctx) {}
   }
-}
+};

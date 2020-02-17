@@ -80,23 +80,26 @@ export default {
     };
   },
   watch: {
-    address(value, prev) {
-      if (value !== prev) {
-        this.loading = true;
-        setTimeout(() => {
-          this.data = ping.map((i, idx) => {
-            return {
-              id: idx,
-              destination_address: i.dst_addr,
-              destination_name: i.dst_name,
-              from: i.from,
-              min: +i.min.toFixed(2),
-              max: +i.max.toFixed(2),
-              avg: +i.avg.toFixed(2)
-            };
-          });
-          this.loading = false;
-        }, 1000);
+    address: {
+      immediate: true,
+      handler(value, prev) {
+        if (value !== prev) {
+          this.loading = true;
+          setTimeout(() => {
+            this.data = ping.map((i, idx) => {
+              return {
+                id: idx,
+                destination_address: i.dst_addr,
+                destination_name: i.dst_name,
+                from: i.from,
+                min: +i.min.toFixed(2),
+                max: +i.max.toFixed(2),
+                avg: +i.avg.toFixed(2)
+              };
+            });
+            this.loading = false;
+          }, 1000);
+        }
       }
     }
   }
