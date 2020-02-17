@@ -19,7 +19,9 @@ localhost:8080/api/v1/pingresult?dest=X.X.X.X
 ### Traceroute
 
 #### Start new
-localhost:8080/api/v1/traceroute?dest=X.X.X.X&num_sources=10
+localhost:8080/api/v1/traceroute?dest=X.X.X.X&desc=description&proto=TCP
+
+returns: {"measurements": [23977152]}
 
 #### Get result for traceroute
 localhost:8080/api/v1/tracerouteresult?dest=X.X.X.X

@@ -7,6 +7,13 @@ import json
 import requests
 
 from urllib.parse import urlparse, parse_qs
+from datetime import datetime,timedelta
+from ripe.atlas.cousteau import (
+  Ping,
+  Traceroute,
+  AtlasSource,
+  AtlasCreateRequest
+)
 
 FILE = 'proxy_test.html'
 PORT = 8080
@@ -46,6 +53,8 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
              self.getTracerouteResults(query_params)
         elif path == MY_RESULTS_REQ:
             self.getMyResults(query_params)
+        elif TRACEROUTE_START_REQ:
+            self.startTraceroute(query_params)
         else:
             print("Invalid Query:")
             print(path)
@@ -60,6 +69,41 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
         source = "https://atlas.ripe.net/api/v2/measurements/23976424/results/"
         responses = requests.get(source).json()
         self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())  
+
+    def startTraceroute(self, query_params):
+        # localhost:8080/api/v1/traceroute?dest=X.X.X.X&desc=description&proto=TCP
+        dest = query_params["dest"][0]
+        desc = query_params["desc"][0]
+        proto = query_params["proto"][0]
+
+        traceroute = Traceroute(
+            af=4,
+            target=dest,
+            description=desc,
+            protocol=proto,
+        )
+
+        source = AtlasSource(
+            type="area",
+            value="WW",
+            requested=5,
+            tags={"include":["system-ipv4-works"]}
+        )
+
+        start_time = datetime.utcnow()+timedelta(0,3)
+        atlas_request = AtlasCreateRequest(
+            start_time=start_time,
+            key=ATLAS_API_KEY,
+            measurements=[traceroute],
+            sources=[source],
+            is_oneoff=True
+        )
+
+        (is_success, response) = atlas_request.create()
+
+        print (response)        
+        print ("Success ", is_success)
+        self.wfile.write(json.dumps(response, ensure_ascii=False).encode())         
 
     def getMyResults(self, query_params):
         source = "https://atlas.ripe.net/api/v2/measurements/my/?key=%s"%ATLAS_API_KEY
