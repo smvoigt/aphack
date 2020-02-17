@@ -7,6 +7,7 @@
             <v-text-field
               v-model="address"
               label="Search..."
+              value="220.247.159.10"
               @keyup.enter="onSearch"
             ></v-text-field>
           </v-col>
