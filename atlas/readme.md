@@ -1,5 +1,10 @@
 # Testing the python APIs to ATLAS
 
+## dependencies
+
+pip3 install ripe.atlas.sagan
+pip3 install ripe.atlas.cousteau
+
 ## Atlas Proxy (atlas_proxy.py)
 Simple python HTTP server to request measurements and see the results
 
