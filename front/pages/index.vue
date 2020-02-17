@@ -66,7 +66,13 @@ export default {
 
 <style lang="scss" scoped>
 .form {
-  max-width: 600px;
+  text-align: center;
+  margin-bottom: 12px;
+
+  .row {
+    width: 600px;
+    margin: 0 auto;
+  }
 
   .select-box {
     width: 200px;
