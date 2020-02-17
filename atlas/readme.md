@@ -1,5 +1,25 @@
 # Testing the python APIs to ATLAS
 
+## Atlas Proxy (atlas_proxy.py)
+Simple python HTTP server to request measurements and see the results
+
+### Ping
+
+#### Start new ping
+localhost:8080/api/v1/ping?dest=X.X.X.X&num_sources=10
+
+#### Get result for ping
+localhost:8080/api/v1/pingresult?dest=X.X.X.X
+
+### Traceroute
+
+#### Start new
+localhost:8080/api/v1/traceroute?dest=X.X.X.X&num_sources=10
+
+#### Get result for traceroute
+localhost:8080/api/v1/tracerouteresult?dest=X.X.X.X
+
+
 ## Costeau
 
 https://ripe-atlas-cousteau.readthedocs.io/
