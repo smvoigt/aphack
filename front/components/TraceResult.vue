@@ -38,7 +38,8 @@
                     <thead>
                       <tr>
                         <th class="text-left">Hop</th>
-                        <th class="text-left">From</th>
+                        <th class="text-left">From Address</th>
+                        <th class="text-left">From City</th>
                         <th class="text-left">Min</th>
                         <th class="text-left">Max</th>
                         <th class="text-left">Avg</th>
@@ -46,9 +47,12 @@
                     </thead>
                     <tbody>
                       <template v-for="item in expanded[0].result">
-                        <tr v-if="item.from" :key="item.id">
+                        <tr v-if="item.from.address" :key="item.id">
                           <td>{{ item.hop }}</td>
-                          <td>{{ item.from }}</td>
+                          <td>{{ item.from.address }}</td>
+                          <td>
+                            {{ `${item.from.city} - ${item.from.country}` }}
+                          </td>
                           <td>{{ item.rtt.min }}</td>
                           <td>{{ item.rtt.max }}</td>
                           <td>{{ item.rtt.avg }}</td>
@@ -92,7 +96,7 @@ function parseResponse(res) {
       let max = 0;
       let rttCount = 0;
       let rttTotal = 0;
-      let from = '';
+      let from = {};
       hop.result.forEach((r) => {
         if (r.rtt) {
           from = r.from;
@@ -135,9 +139,10 @@ function parseResponse(res) {
 
     return {
       id: idx,
-      destination_address: i.dst_addr,
-      destination_name: i.dst_name,
-      from: i.from,
+      destination_address: i.dst_addr.address,
+      destination_city: `${i.dst_addr.city} - ${i.dst_addr.country}`,
+      from_address: i.from.address,
+      from_city: `${i.from.city} - ${i.from.country}`,
       rtt: {
         min: +localMin.toFixed(2),
         max: +localMax.toFixed(2),
@@ -163,12 +168,12 @@ export default {
       singleExpand: true,
       headers: [
         {
-          text: 'Destination name',
-          sortable: true,
-          value: 'destination_name'
+          text: 'Destination address',
+          value: 'destination_address'
         },
-        { text: 'Destination address', value: 'destination_address' },
-        { text: 'From', value: 'from' },
+        { text: 'Destination city', value: 'destination_city' },
+        { text: 'From address', value: 'from_address' },
+        { text: 'From city', value: 'from_city' },
         { text: 'Min', value: 'rtt.min' },
         { text: 'Max', value: 'rtt.max' },
         { text: 'Average', value: 'rtt.avg' },
@@ -206,7 +211,12 @@ export default {
       rawData.forEach((i) => {
         const { rtt } = i;
         if (rtt.min < rtt.max) {
-          data.push(['' + i.hop, i.from, rtt.min, rtt.max]);
+          data.push([
+            '' + i.hop,
+            `${i.from.city} - ${i.from.country}`,
+            rtt.min,
+            rtt.max
+          ]);
         }
       });
       return data;

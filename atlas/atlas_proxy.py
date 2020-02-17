@@ -71,7 +71,7 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
                 country = 'N/A'
             return {"city": city, "country": country, "address": addr}
         else:
-            return {"address": addr}
+            return {"address": addr,"city":"N/A", "country":"N/A"}
 
     def getPingResults(self, query_params):
         source = "https://atlas.ripe.net/api/v2/measurements/23976423/results/"
@@ -87,6 +87,7 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
         for i in responses:
             dst_addr = i['dst_addr']
             i['dst_addr'] = self.getCity(dst_addr)
+            i['from'] = self.getCity(i['from'])
             results = i['result']
             for j in results:
                 for k in j['result']:

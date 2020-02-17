@@ -19,7 +19,7 @@
           </v-toolbar>
         </template>
         <template v-slot:expanded-item="">
-          <td :colspan="5">
+          <td :colspan="7">
             <v-simple-table>
               <template v-slot:default>
                 <thead>
@@ -36,8 +36,9 @@
                 <template v-for="item in data">
                   <tr v-if="item.from" :key="item.id">
                     <td>{{ item.destination_address }}</td>
-                    <td>{{ item.destination_name }}</td>
-                    <td>{{ item.from }}</td>
+                    <td>{{ item.destination_city }}</td>
+                    <td>{{ item.from_address }}</td>
+                    <td>{{ item.from_city }}</td>
                     <td>{{ item.min }}</td>
                     <td>{{ item.max }}</td>
                     <td>{{ item.avg }}</td>
@@ -64,13 +65,10 @@ export default {
       loading: false,
       data: null,
       headers: [
-        {
-          text: 'Destination name',
-          sortable: true,
-          value: 'destination_name'
-        },
         { text: 'Destination address', value: 'destination_address' },
-        { text: 'From', value: 'from' },
+        { text: 'Destination city', value: 'destination_city' },
+        { text: 'From address', value: 'from_address' },
+        { text: 'From city', value: 'from_city' },
         { text: 'Min', value: 'min' },
         { text: 'Max', value: 'max' },
         { text: 'Average', value: 'avg' }
@@ -90,9 +88,10 @@ export default {
               this.data = res.map((i, idx) => {
                 return {
                   id: idx,
-                  destination_address: i.dst_addr,
-                  destination_name: i.dst_name,
-                  from: i.from,
+                  destination_address: i.dst_addr.address,
+                  destination_city: `${i.dst_addr.city} - ${i.dst_addr.country}`,
+                  from_address: i.from.address,
+                  from_city: `${i.from.city} - ${i.from.country}`,
                   min: +i.min.toFixed(2),
                   max: +i.max.toFixed(2),
                   avg: +i.avg.toFixed(2)
