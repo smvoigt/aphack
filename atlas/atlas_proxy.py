@@ -20,6 +20,8 @@ from ripe.atlas.cousteau import (
 )
 from _sqlite3 import Error
 
+from scapy.layers.inet import TCP, IP
+
 reader = maxminddb.open_database('GeoLite2-City.mmdb')
 
 FILE = 'proxy_test.html'
@@ -37,13 +39,23 @@ conn=None
 db_file = '0x0B1.db'
 db_lock = threading.Lock ()
 
+db_dict = {}
+
 # /api/v2/measurements/my/?key=ba0ea367-df59-4cfb-8e50-3fc8a2fd9243
+def getMyResults():
+    source = "https://atlas.ripe.net/api/v2/measurements/my/?key=%s" % ATLAS_API_KEY
+    responses = requests.get(source).json()
+    return responses
+
+    # for result in results["results"]:
+    #     ts = result["creation_time"]
+    #     desc = result["description"]
+    #     id = result["id"]
+    #     target = result["target"]
+    #     print (target, desc, id, ts)
 
 def connect_db():
     """ create a database connection to a SQLite database """
-    global conn
-    
-
     conn = None
     try:
         conn = sqlite3.connect(db_file)
@@ -58,40 +70,46 @@ def connect_db():
             conn.close()
 
 def get_json(dbid):
-    conn = None
-    try:
-        db_lock.acquire()
-        conn = sqlite3.connect(db_file)
-        cur = conn.cursor()
-        cur.execute("SELECT json FROM measurements WHERE id=%d"%int(dbid))
+    if dbid in db_dict:
+        return db_dict[dbid]
+    else:
+        return None
+    # conn = None
+    # try:
+    #     db_lock.acquire()
+    #     conn = sqlite3.connect(db_file)
+    #     cur = conn.cursor()
+    #     cur.execute("SELECT json FROM measurements WHERE id=%d"%int(dbid))
+    #
+    #     rows = cur.fetchall()
+    #     if len(rows) < 1:
+    #         return None
+    #     else:
+    #         return rows[0][0]
+    #
+    # finally:
+    #     if conn is not None:
+    #         conn.close()
+    #     db_lock.release()
 
-        rows = cur.fetchall()
-        if len(rows) < 1:
-            return None
-        else:
-            return rows[0][0]
-
-    finally:
-        if conn is not None:
-            conn.close()
-        db_lock.release()    
-
-def set_json(dbid, json):
-    conn = None
-    try:
-        db_lock.acquire()
-        conn = sqlite3.connect(db_file)
-        cur = conn.cursor()
-
-        sql = ''' INSERT INTO measurements (id,json)
-              VALUES(?,?) '''
-    
-        cur.execute(sql, dbid, json)
-    
-    finally:
-        if conn is not None:
-            conn.close()
-        db_lock.release()            
+def set_json(dbid, json_2):
+    db_dict[dbid]=json_2
+    # conn = None
+    # try:
+    #     db_lock.acquire()
+    #     conn = sqlite3.connect(db_file)
+    #     cur = conn.cursor()
+    #
+    #     sql = ''' INSERT INTO measurements (id,json)
+    #           VALUES(?,?) '''
+    #
+    #     cur.execute(sql, (int(dbid), json.dumps(str(json_2), ensure_ascii=False).encode()))
+    #     conn.commit()
+    #
+    # finally:
+    #     if conn is not None:
+    #         conn.close()
+    #     db_lock.release()
 
 
 class RunReverseTraceroute(threading.Thread):
@@ -102,25 +120,22 @@ class RunReverseTraceroute(threading.Thread):
     def run(self):
         print(self.atlas_id)
 
-        json = get_json(self.atlas_id)
-        if json is None:
+        exist_json = get_json(self.atlas_id)
+        if exist_json is None:
             print("No existing data for %d"%self.atlas_id)
             source = "https://atlas.ripe.net/api/v2/measurements/%d/results/"%self.atlas_id
             responses = requests.get(source).json()
+            dst_ips = []
+            new_json = []
             for response in responses:
                 src = netaddr.IPAddress(response['src_addr'])
-                if src.is_private():
-                    print('private')
-                print(src)                
-                print(response['dst_addr'])
+                dst = netaddr.IPAddress(response['dst_addr'])
                 valid_dst = None
                 for ttl_result in response['result']:
-                    print(ttl_result['hop'])
                     if valid_dst is not None:
                         break
                     for result in ttl_result['result']:
                         this_hop = result.get('from')
-                        print(this_hop)
                         if this_hop is not None:
                             this_hop_ip = netaddr.IPAddress(this_hop)
                             if this_hop_ip.is_unicast() and not this_hop_ip.is_private():
@@ -128,17 +143,33 @@ class RunReverseTraceroute(threading.Thread):
 
                         if valid_dst is not None:
                             break
-
+                new_json.append(response)
                 if valid_dst is not None:
-                    
-                    print ("Valid DST: %s" % valid_dst)
-                    ans, unans = sr(IP(dst=valid_dst, ttl=(1,25),id=RandShort())/TCP(flags=0x2))
-                    for snd,rcv in ans:
-                        print (snd.ttl, rcv.src, isinstance(rcv.payload, TCP))
+                    # Traceroute back to the source
+                    print("Tracing back to %s"%valid_dst)
+                    new_result = {}
+                    new_result["dst_addr"] = str(valid_dst)
+                    new_result["dst_name"] = str(valid_dst)
+                    new_result["from"] = str(dst)
+                    new_result["result"] = []
+                    # dst_ips.append(str(valid_dst))
+                    ans, unans = sr(IP(dst=str(valid_dst), ttl=(1, 25), id=RandShort()) / TCP(flags=0x2),timeout=5)
+                    for snd, rcv in ans:
+                        tr_response={}
+                        tr_response["hop"] = snd.ttl
 
+                        ans_resp = {}
+                        ans_resp["from"] = rcv.src
+                        ans_resp["rtt"] = rcv.time - snd.time
+                        ans_resp["size"] = rcv.len
+                        ans_resp["ttl"] = rcv.ttl
 
+                        tr_response["result"] = [ans_resp,ans_resp,ans_resp]
+                        new_result["result"].append(tr_response)
 
+                    new_json.append(new_result)
 
+            set_json(self.atlas_id, new_json)
 
 
 
@@ -203,18 +234,62 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())
 
     def getTracerouteResults(self, query_params):
-        source = "https://atlas.ripe.net/api/v2/measurements/23976424/results/"
-        responses = requests.get(source).json()
-        for i in responses:
-            dst_addr = i['dst_addr']
-            i['dst_addr'] = self.getCity(dst_addr)
-            i['from'] = self.getCity(i['from'])
-            results = i['result']
-            for j in results:
-                for k in j['result']:
-                    if k.get('from'):
-                        k['from'] = self.getCity(k['from'])
-        self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())  
+        dest = query_params["dest"][0]
+        myresults = getMyResults()
+        id=0
+        for result in myresults["results"]:
+            target = result["target"]
+            if target == dest:
+                 id = result["id"]
+
+        if id == 0:
+             # start a new measurement
+             traceroute = Traceroute(
+                 af=4,
+                 target=dest,
+                 description="auto traceroute to %s"%dest,
+                 protocol="TCP",
+             )
+
+             source = AtlasSource(
+                 type="area",
+                 value="WW",
+                 requested=5,
+                 tags={"include": ["system-ipv4-works"]}
+             )
+
+             start_time = datetime.utcnow() + timedelta(0, 1)
+             atlas_request = AtlasCreateRequest(
+                 start_time=start_time,
+                 key=ATLAS_API_KEY,
+                 measurements=[traceroute],
+                 sources=[source],
+                 is_oneoff=True
+             )
+
+             (is_success, response) = atlas_request.create()
+             if is_success:
+                 id = response['measurements'][0]
+                  # {'measurements': [23976423, 23976424]}
+        print("Run traceroute back for id %d"%id)
+        rt = RunReverseTraceroute(id)
+        rt.start()
+        rt.join(timeout=60)
+
+        responses = get_json(id)
+
+        # source = "https://atlas.ripe.net/api/v2/measurements/%d/results/"%id
+        # responses = requests.get(source).json()
+        # for i in responses:
+        #     dst_addr = i['dst_addr']
+        #     i['dst_addr'] = self.getCity(dst_addr)
+        #     i['from'] = self.getCity(i['from'])
+        #     results = i['result']
+        #     for j in results:
+        #         for k in j['result']:
+        #             if k.get('from'):
+        #                 k['from'] = self.getCity(k['from'])
+        self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())
 
     def startTraceroute(self, query_params):
         # localhost:8080/api/v1/traceroute?dest=X.X.X.X&desc=description&proto=TCP
@@ -236,7 +311,7 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
             tags={"include":["system-ipv4-works"]}
         )
 
-        start_time = datetime.utcnow()+timedelta(0,3)
+        start_time = datetime.utcnow()+timedelta(0,2)
         atlas_request = AtlasCreateRequest(
             start_time=start_time,
             key=ATLAS_API_KEY,
@@ -272,5 +347,13 @@ if __name__ == "__main__":
     # rt = RunReverseTraceroute(23977152)
     # rt.start()
     # rt.join()
+    # results = getMyResults()
+    # print(results)
+    # for result in results["results"]:
+    #     ts = result["creation_time"]
+    #     desc = result["description"]
+    #     id = result["id"]
+    #     target = result["target"]
+    #     print (target, desc, id, ts)
 
 
