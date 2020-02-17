@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from datetime import datetime,timedelta
 from ripe.atlas.cousteau import (
   Ping,
