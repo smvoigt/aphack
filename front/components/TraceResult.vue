@@ -64,6 +64,7 @@
                   :settings="{ packages: ['corechart', 'timeline'] }"
                   type="Timeline"
                   :data="parseChartData(expanded[0].result)"
+                  :options="options"
                 />
               </v-tab-item>
             </v-tabs-items>
@@ -106,7 +107,10 @@ export default {
         { text: 'Max', value: 'rtt.max' },
         { text: 'Average', value: 'rtt.avg' },
         { text: '', value: 'data-table-expand' }
-      ]
+      ],
+      options: {
+        height: 700
+      }
     };
   },
 
@@ -189,33 +193,24 @@ export default {
   },
   methods: {
     parseChartData(rawData) {
-      // console.log(rawData);
-      const data = [['hop', 'min', 'max']];
-      // for (let index = 0; index < rawData.length; index++) {
-      //   const i = rawData[index];
-      //   const { rtt } = i;
-      //   if (rtt.min < rtt.max) {
-      //     data.push([i.hop, rtt.min, rtt.max]);
-      //   }
-      // }
+      const data = [['hop', 'label', 'min', 'max']];
       rawData.forEach((i) => {
         const { rtt } = i;
         if (rtt.min < rtt.max) {
-          data.push(['' + i.hop, rtt.min, rtt.max]);
+          data.push(['' + i.hop, i.from, rtt.min, rtt.max]);
         }
       });
-      console.log(data);
-      // return data;
-      const data2 = [
-        ['name', 'min', 'max'],
-        ['aaa', 1, 4],
-        ['bbb', 2, 6]
-      ];
-      console.log(data2);
       return data;
     }
   }
 };
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.v-data-table__expanded.v-data-table__expanded__content {
+  td {
+    padding: 0;
+    border: 10px solid grey;
+  }
+}
+</style>
