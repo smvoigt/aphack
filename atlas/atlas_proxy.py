@@ -5,8 +5,11 @@ import socketserver
 import threading
 import json
 import requests
+import maxminddb
 
 from urllib.parse import urlparse, parse_qs
+
+reader = maxminddb.open_database('GeoLite2-City.mmdb')
 
 FILE = 'proxy_test.html'
 PORT = 8080
@@ -44,7 +47,7 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
         if path == PING_RESULT_REQ:
             self.getPingResults(query_params)
         elif path == TRACEROUTE_RESULT_REQ:
-             self.getTracerouteResults(query_params)
+            self.getTracerouteResults(query_params)
         elif path == MY_RESULTS_REQ:
             self.getMyResults(query_params)
         else:
@@ -52,14 +55,43 @@ class TestHandler(http.server.SimpleHTTPRequestHandler):
             print(path)
             self.wfile.write(json.dumps({'type':result_str, 'params': query_params, 'received': 'ok'}).encode())
 
+
+    def getCity(self, addr):
+        response = reader.get(addr)
+        if response is not None:
+            city = response.get('city')
+            country = response.get('country')
+            if city :
+                city = city.get('names').get('en')
+            else:
+                city = 'N/A'
+            if country :
+                country = country.get('names').get('en')
+            else:
+                country = 'N/A'
+            return {"city": city, "country": country, "address": addr}
+        else:
+            return {"address": addr}
+
     def getPingResults(self, query_params):
         source = "https://atlas.ripe.net/api/v2/measurements/23976423/results/"
         responses = requests.get(source).json()
+        for i in responses:
+            i['dst_addr'] = self.getCity(i['dst_addr'])
+            i['from'] = self.getCity(i['from'])
         self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())
 
     def getTracerouteResults(self, query_params):
         source = "https://atlas.ripe.net/api/v2/measurements/23976424/results/"
         responses = requests.get(source).json()
+        for i in responses:
+            dst_addr = i['dst_addr']
+            i['dst_addr'] = self.getCity(dst_addr)
+            results = i['result']
+            for j in results:
+                for k in j['result']:
+                    if k.get('from'):
+                        k['from'] = self.getCity(k['from'])
         self.wfile.write(json.dumps(responses, ensure_ascii=False).encode())  
 
     def getMyResults(self, query_params):
