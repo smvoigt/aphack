@@ -5,6 +5,9 @@ import socketserver
 import threading
 import json
 import requests
+import sqlite3
+import netaddr
+from scapy.all import *
 
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime,timedelta
@@ -14,6 +17,7 @@ from ripe.atlas.cousteau import (
   AtlasSource,
   AtlasCreateRequest
 )
+from _sqlite3 import Error
 
 FILE = 'proxy_test.html'
 PORT = 8080
@@ -26,7 +30,115 @@ TRACEROUTE_START_REQ=API+'/traceroute'
 PING_RESULT_REQ=API+'/pingresult'
 TRACEROUTE_RESULT_REQ=API+'/tracerouteresult'
 
+conn=None
+db_file = '0x0B1.db'
+db_lock = threading.Lock ()
+
 # /api/v2/measurements/my/?key=ba0ea367-df59-4cfb-8e50-3fc8a2fd9243
+
+def connect_db():
+    """ create a database connection to a SQLite database """
+    global conn
+    
+
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print(sqlite3.version)
+        conn.execute('''CREATE TABLE IF NOT EXISTS measurements 
+             (id int, json text) ''')
+        conn.commit()
+    except Error as e:
+        print(e)
+    finally:
+        if conn:
+            conn.close()
+
+def get_json(dbid):
+    conn = None
+    try:
+        db_lock.acquire()
+        conn = sqlite3.connect(db_file)
+        cur = conn.cursor()
+        cur.execute("SELECT json FROM measurements WHERE id=%d"%int(dbid))
+
+        rows = cur.fetchall()
+        if len(rows) < 1:
+            return None
+        else:
+            return rows[0][0]
+
+    finally:
+        if conn is not None:
+            conn.close()
+        db_lock.release()    
+
+def set_json(dbid, json):
+    conn = None
+    try:
+        db_lock.acquire()
+        conn = sqlite3.connect(db_file)
+        cur = conn.cursor()
+
+        sql = ''' INSERT INTO measurements (id,json)
+              VALUES(?,?) '''
+    
+        cur.execute(sql, dbid, json)
+    
+    finally:
+        if conn is not None:
+            conn.close()
+        db_lock.release()            
+
+
+class RunReverseTraceroute(threading.Thread):
+    def __init__(self,atlas_id):
+        super().__init__()
+        self.atlas_id = atlas_id
+
+    def run(self):
+        print(self.atlas_id)
+
+        json = get_json(self.atlas_id)
+        if json is None:
+            print("No existing data for %d"%self.atlas_id)
+            source = "https://atlas.ripe.net/api/v2/measurements/%d/results/"%self.atlas_id
+            responses = requests.get(source).json()
+            for response in responses:
+                src = netaddr.IPAddress(response['src_addr'])
+                if src.is_private():
+                    print('private')
+                print(src)                
+                print(response['dst_addr'])
+                valid_dst = None
+                for ttl_result in response['result']:
+                    print(ttl_result['hop'])
+                    if valid_dst is not None:
+                        break
+                    for result in ttl_result['result']:
+                        this_hop = result.get('from')
+                        print(this_hop)
+                        if this_hop is not None:
+                            this_hop_ip = netaddr.IPAddress(this_hop)
+                            if this_hop_ip.is_unicast() and not this_hop_ip.is_private():
+                                valid_dst = this_hop_ip
+
+                        if valid_dst is not None:
+                            break
+
+                if valid_dst is not None:
+                    
+                    print ("Valid DST: %s" % valid_dst)
+                    ans, unans = sr(IP(dst=valid_dst, ttl=(1,25),id=RandShort())/TCP(flags=0x2))
+                    for snd,rcv in ans:
+                        print (snd.ttl, rcv.src, isinstance(rcv.payload, TCP))
+
+
+
+
+
+
+
 
 class TestHandler(http.server.SimpleHTTPRequestHandler):
     """The test example handler."""
@@ -118,6 +230,14 @@ def start_server():
     print("Server starting on localhost:%d"%PORT)
     server.serve_forever()
 
+
+
 if __name__ == "__main__":
-     start_server()
+    connect_db()
+    start_server()
+
+    # rt = RunReverseTraceroute(23977152)
+    # rt.start()
+    # rt.join()
+
 

@@ -4,6 +4,8 @@
 
 pip3 install ripe.atlas.sagan
 pip3 install ripe.atlas.cousteau
+pip3 install netaddr
+pip3 install scapy
 
 ## Atlas Proxy (atlas_proxy.py)
 Simple python HTTP server to request measurements and see the results
